@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css">
+    <title>AI Tutor</title>
+    <style>
+
+        { box-sizing: border-box; }
+        .navbar { min-height: 70px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+        .navbar .container-md {display: flex; align-items: center; justify-content: space-between; width: 100%;}
+        .chat-message {
+    padding: 10px;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.user-input {
+    background-color: #e6f2ff; /* светло-синий */
+    align-self: flex-end;
+    text-align: right;
+}
+
+.ai-response {
+    background-color: #f8f9fa; /* светло-серый */
+    align-self: flex-start;
+    text-align: left;
+}
+
+    </style>
+</head>
+<body>
+    {% include 'navbar.html' %}
+    {% block content %}
+    {% endblock %}
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"></script>
+    <style>
+    .container.wrapper {
+        margin-top: 70px;
+    }
+</style>
+
+    <script>
+        var websocketString = '';
+        if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+            websocketString = "ws://localhost:8000/ws";
+        } else {
+            websocketString = `wss://${window.location.hostname}/ws`;
+        }
+        window.selectedLanguage = "{{ selected_language | default('Python') }}";
+
+        function selectLanguage(language) {
+            window.selectedLanguage = language;
+            const languageElement = document.getElementById("language");
+            if (languageElement) {
+                languageElement.textContent = language;
+            }
+        }
+    </script>
+</body>
+</html>

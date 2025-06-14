@@ -1,0 +1,162 @@
+{% include 'layout.html' %}
+<div class="container wrapper">
+    <div class="language-selector mb-3">
+        <button class="btn btn-outline-primary btn-sm mx-1" onclick="selectLanguage('Python')">Python</button>
+        <button class="btn btn-outline-primary btn-sm mx-1" onclick="selectLanguage('JavaScript')">JavaScript</button>
+        <button class="btn btn-outline-primary btn-sm mx-1" onclick="selectLanguage('Java')">Java</button>
+        <button class="btn btn-outline-primary btn-sm mx-1" onclick="selectLanguage('C++')">C++</button>
+    </div>
+
+    <div class="main">
+        <div class="card text-center">
+            <div class="card-header">
+                Practice Programming (<span id="language">{{ selected_language|default('Python') }}</span>)
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="codeInput" class="form-label">Task: <span id="taskDescription">{{ task_description }}</span></label>
+                    <textarea class="form-control" id="codeInput" rows="5" placeholder="Write your code here..."></textarea>
+                    <button class="btn btn-success mt-2" type="button" id="submitCodeButton">Submit Code</button>
+                </div>
+                <div class="chat-history" id="chatHistory"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="footer">
+        <div class="input-group mb-3">
+            <input class="form-control" placeholder="Ask a question or hint..." id="userInput">
+            <button class="btn btn-primary" type="button" id="sendButton">Send</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.selectedLanguage = window.selectedLanguage || "{{ selected_language|default('Python') }}";
+    const codeInput = document.getElementById("codeInput");
+    const userInput = document.getElementById("userInput");
+    const sendButton = document.getElementById("sendButton");
+    const chatHistory = document.getElementById("chatHistory");
+    const taskDescription = document.getElementById("taskDescription");
+
+    const wsUrl = websocketString + (websocketString.includes('?') ? '&' : '?') + `lang=${encodeURIComponent(window.selectedLanguage)}`;
+    let ws = new WebSocket(wsUrl);
+    let lastBotMessageDiv = null;
+
+    ws.onopen = () => console.log("WebSocket connected");
+
+    ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        chatHistory.innerHTML += `<div class="chat-message ai-response">Connection error</div>`;
+    };
+
+    ws.onmessage = (event) => {
+        const chunk = event.data;
+
+        try {
+            const messageData = JSON.parse(chunk);
+            if (messageData.type === 'new_task') {
+                taskDescription.textContent = messageData.task;
+                return;
+            }
+        } catch (e) {
+        }
+
+        if (!lastBotMessageDiv) {
+            lastBotMessageDiv = document.createElement("div");
+            lastBotMessageDiv.className = "chat-message ai-response";
+            chatHistory.appendChild(lastBotMessageDiv);
+        }
+        lastBotMessageDiv.textContent += chunk;
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    };
+
+    ws.onclose = () => {
+        console.log("WebSocket disconnected");
+        lastBotMessageDiv = null;
+    };
+
+    const submitCodeButton = document.getElementById("submitCodeButton");
+
+    submitCodeButton.onclick = () => {
+        const code = codeInput.value.trim();
+        if (!code) return;
+
+        const userDiv = document.createElement("div");
+        userDiv.className = "chat-message user-input";
+        userDiv.textContent = code;
+        chatHistory.appendChild(userDiv);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        lastBotMessageDiv = null;
+        ws.send(JSON.stringify({ type: 'code', content: code, language: window.selectedLanguage }));
+        codeInput.value = "";
+    };
+
+    sendButton.onclick = () => {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        const userDiv = document.createElement("div");
+        userDiv.className = "chat-message user-input";
+        userDiv.textContent = message;
+        chatHistory.appendChild(userDiv);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+
+        lastBotMessageDiv = null;
+        ws.send(JSON.stringify({ type: 'chat', content: message, language: window.selectedLanguage }));
+        userInput.value = "";
+    };
+
+    userInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendButton.click();
+    });
+
+    function selectLanguage(lang) {
+        window.selectedLanguage = lang;
+        document.getElementById("language").textContent = lang;
+
+        if (ws.readyState === WebSocket.OPEN) ws.close();
+
+        setTimeout(() => {
+            const newWsUrl = websocketString + (websocketString.includes('?') ? '&' : '?') + `lang=${encodeURIComponent(lang)}`;
+            ws = new WebSocket(newWsUrl);
+            lastBotMessageDiv = null;
+
+            ws.onopen = () => {
+                console.log("WebSocket reconnected for language:", lang);
+                ws.send(JSON.stringify({ type: 'change_language', language: lang }));
+            };
+
+            ws.onerror = (error) => {
+                console.error("WebSocket error:", error);
+                chatHistory.innerHTML += `<div class="chat-message ai-response">Connection error</div>`;
+            };
+
+            ws.onmessage = (event) => {
+                const chunk = event.data;
+
+                try {
+                    const messageData = JSON.parse(chunk);
+                    if (messageData.type === 'new_task') {
+                        taskDescription.textContent = messageData.task;
+                        return;
+                    }
+                } catch (e) {
+                }
+
+                if (!lastBotMessageDiv) {
+                    lastBotMessageDiv = document.createElement("div");
+                    lastBotMessageDiv.className = "chat-message ai-response";
+                    chatHistory.appendChild(lastBotMessageDiv);
+                }
+                lastBotMessageDiv.textContent += chunk;
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            };
+
+            ws.onclose = () => {
+                lastBotMessageDiv = null;
+            };
+        }, 500);
+    }
+</script>
