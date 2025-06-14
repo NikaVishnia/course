@@ -32,8 +32,6 @@
 </div>
 
 <script>
-    const websocketString = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
-
     window.selectedLanguage = window.selectedLanguage || "{{ selected_language|default('Python') }}";
     const codeInput = document.getElementById("codeInput");
     const userInput = document.getElementById("userInput");
